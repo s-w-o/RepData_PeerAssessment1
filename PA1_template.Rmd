@@ -1,25 +1,97 @@
 ---
-title: "Reproducible Research: Peer Assessment 1"
-output: 
-  html_document:
-    keep_md: true
+title: "PA1_template"
+output: html_document
 ---
 
+# What is mean total number of steps taken per day?
 
-## Loading and preprocessing the data
+#### 1. Code for reading in the dataset and/or processing the data
+
+```{r}
+setwd("C:/tmp/")
+data <- read.csv("./activity.csv")
+str(data)
+```
+
+#### 2. Histogram of the total number of steps taken each day
+
+```{r}
+library(dplyr)
+data1 <- data %>% filter(!is.na(steps))  %>% group_by(date) %>%  summarize(steps_per_day = sum(steps, na.rm = TRUE)) 
+hist(as.numeric(data1$steps_per_day), xlab = "steps", main = "histogram of total number of steps taken per day")
+
+```
+
+#### 3. Mean and median number of steps taken each day
+```{r}
+summary(data1$steps_per_day)
+```
+
+# What is the average daily activity pattern?
+
+#### 1.Time series plot of the 5-minute interval (x-axis) and the average number of steps taken, averaged across all days (y-axis)
+```{r}
+library(ggplot2)
+data2 <- data %>% filter(!is.na(steps)) %>% group_by(interval) %>%  summarize(average_steps_per_interval = mean(steps, na.rm = TRUE))
+ggplot(data2, aes(interval, average_steps_per_interval)) +
+           geom_line (na.rm=TRUE, color="blue", size=1) + 
+           ggtitle("average daily activity pattern") +
+           xlab("Interval") + ylab("Steps")
+```
+
+#### 2. The 5-minute interval that, on average, contains the maximum number of steps
+
+```{r}
+max <- head(arrange(data2, desc(data2$average_steps_per_interval)),1)
+```
+The interval with maximum number of steps is `r max$interval`.
+
+# Imputing missing values
+
+#### 1. The total number of missing values in the dataset
+```{r}
+m <- sum(is.na(data))
+```
+Total number of rows with NA is `r m`.
+
+#### 2. Create a new dataset that is equal to the original dataset but with the missing data filled in
+
+##### The strategy for filling in all of the missing values in the dataset: 
+replace NA with the average number of steps taken per 5-minute interval 
+
+```{r}
+data_impute <- mutate(left_join(data,data2, by = "interval"), steps_impute=  steps )
+data_impute$steps_impute[which(is.na(data_impute$steps_impute))] <- data_impute$average_steps_per_interval
+```
+#### 3. Histogram of the total number of steps taken each day after imputing missing values
+```{r}
+data_impute1 <- data_impute %>% group_by(date) %>%  summarize(steps_per_day_impute = sum(steps_impute, na.rm = TRUE)) 
+hist(as.numeric(data_impute1$steps_per_day_impute), xlab = "steps", main = "histogram of total number of steps taken per day")
+```
+
+#### 4. The mean and median of total number of steps taken per day after imputing missing values
+```{r}
+summary(data_impute1$steps_per_day_impute)
+```
+
+Mean value after imputation stays the same but there is slight difference in median value.
+
+# Are there differences in activity patterns between weekdays and weekends?
+
+#### 1. Create a new factor variable in the dataset with two levels - "weekday" and "weekend"
+```{r}
+data_impute_factor <- mutate(data_impute, day=weekdays(as.Date(date)), factor = as.factor(ifelse(weekdays(as.Date(date)) %in% c('Saturday','Sunday'), c("weekend"), c("weekday"))))
+head(data_impute_factor,3)
+
+```
+#### 2. The plot containing a time series plot of the 5-minute interval (x-axis) and the average number of steps taken, averaged across all weekday days or weekend days (y-axis)
+```{r}
+data_final <- data_impute_factor %>% group_by(interval,factor) %>%  summarize(average_steps_per_interval_per_factor = mean(steps_impute))
+ggplot(data_final, aes(interval, average_steps_per_interval_per_factor)) + facet_grid(factor ~ .) +
+           geom_line (na.rm=TRUE, color="blue", size=1) + 
+           ggtitle("average activity pattern") +
+           xlab("Interval") + ylab("Steps")
+```
+           
 
 
-
-## What is mean total number of steps taken per day?
-
-
-
-## What is the average daily activity pattern?
-
-
-
-## Imputing missing values
-
-
-
-## Are there differences in activity patterns between weekdays and weekends?
